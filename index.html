@@ -102,6 +102,32 @@
 </style>
 </head>
 <body>
+ <script>
+const PASSWORD = "Nov251991";
+
+const enteredPassword = prompt("🔒 PROJECT:NOVA Development Build\n\nEnter password:");
+
+if (enteredPassword !== PASSWORD) {
+    document.body.innerHTML = `
+    <div style="
+        background:#0d0d0d;
+        color:#fff;
+        height:100vh;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        font-family:Segoe UI,sans-serif;
+        text-align:center;
+    ">
+        <div>
+            <h1 style="color:#e05c00;">Access Denied</h1>
+            <p style="color:#888;">Incorrect password.</p>
+        </div>
+    </div>
+    `;
+    throw new Error("Unauthorized");
+}
+</script>
 <div class="db" id="root">
   <div class="loading"><i class="ti ti-loader"></i> Loading Bando Bodega dashboard...</div>
 </div>
