@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bando Bodega — Project Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d0d0d; color: #fff; min-height: 100vh; }
+  .db { padding: 1.25rem; max-width: 1400px; margin: 0 auto; }
+
+  .hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #222; flex-wrap: wrap; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 44px; height: 44px; background: #e05c00; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -1px; }
+  .brand-name { font-size: 18px; font-weight: 600; color: #fff; }
+  .brand-sub { font-size: 11px; color: #555; margin-top: 2px; }
+  .hdr-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .badge-green { background: #0d2e0d; color: #4caf50; border: 1px solid #1e5c1e; border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 500; }
+  .badge-orange { background: #2a1500; color: #e05c00; border: 1px solid #5a2e00; border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 500; }
+  .refresh-btn { background: #1a1a1a; color: #888; border: 1px solid #2a2a2a; border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; transition: all .2s; }
+  .refresh-btn:hover { background: #222; color: #ccc; border-color: #444; }
+  .last-updated { font-size: 11px; color: #444; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .kpi { background: #1a1a1a; border-radius: 12px; padding: 14px 16px; border: 1px solid #222; }
+  .kpi-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .kpi-val { font-size: 28px; font-weight: 600; color: #fff; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: #444; margin-top: 4px; }
+  .kpi-orange .kpi-val { color: #e05c00; }
+  .kpi-yellow .kpi-val { color: #f5c518; }
+  .kpi-green .kpi-val { color: #4caf50; }
+  .kpi-blue .kpi-val { color: #4a9eff; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .grid3 { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,.5fr); gap: 10px; margin-bottom: 10px; }
+  .grid2b { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .card { background: #1a1a1a; border-radius: 12px; padding: 16px 18px; border: 1px solid #222; }
+  .card-title { font-size: 10px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .card-title i { font-size: 14px; color: #e05c00; }
+
+  .phase-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .phase-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .phase-name { font-size: 12px; color: #ccc; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .phase-pct { font-size: 11px; font-weight: 600; color: #666; min-width: 36px; text-align: right; }
+  .track { flex: 1; height: 5px; background: #252525; border-radius: 3px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
+  .task-row { display: flex; align-items: flex-start; gap: 8px; padding: 9px 0; border-bottom: 1px solid #1e1e1e; }
+  .task-row:last-child { border-bottom: none; }
+  .task-name { font-size: 12px; color: #ddd; flex: 1; line-height: 1.4; }
+  .task-meta { font-size: 10px; color: #444; margin-top: 3px; }
+  .pills { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+  .pill { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+  .pill-red { background: #2a0d0d; color: #e05c00; border: 1px solid #4a1a1a; }
+  .pill-yellow { background: #2a2000; color: #f5c518; border: 1px solid #5a4500; }
+  .pill-blue { background: #0d1a2a; color: #4a9eff; border: 1px solid #1a3a5a; }
+  .pill-purple { background: #1a0d2a; color: #a07aff; border: 1px solid #3a1a5a; }
+  .pill-gray { background: #1e1e1e; color: #555; border: 1px solid #2a2a2a; }
+  .pill-green { background: #0d2a0d; color: #4caf50; border: 1px solid #1a5a1a; }
+
+  .tl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .tl-label { font-size: 11px; color: #555; min-width: 100px; flex-shrink: 0; }
+  .tl-track { flex: 1; height: 8px; background: #222; border-radius: 4px; position: relative; }
+  .tl-bar { height: 100%; border-radius: 4px; position: absolute; }
+  .tl-months { display: flex; justify-content: space-between; padding-left: 110px; margin-top: 6px; }
+  .tl-month { font-size: 10px; color: #333; }
+
+  .dl-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #1e1e1e; gap: 8px; }
+  .dl-row:last-child { border-bottom: none; }
+  .dl-name { font-size: 12px; color: #ddd; flex: 1; }
+  .dl-phase { font-size: 10px; color: #444; margin-top: 2px; }
+  .dl-date { font-size: 11px; color: #555; min-width: 44px; text-align: right; flex-shrink: 0; }
+
+  .action-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid #1e1e1e; }
+  .action-row:last-child { border-bottom: none; }
+  .action-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; color: #fff; }
+  .action-text { font-size: 12px; color: #ccc; line-height: 1.5; flex: 1; }
+
+  .ring-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0; }
+  .ring-num { font-size: 32px; font-weight: 600; color: #e05c00; margin-top: 8px; }
+  .ring-sub { font-size: 11px; color: #444; margin-top: 4px; text-align: center; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #555; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  .loading { color: #555; font-size: 14px; padding: 3rem; text-align: center; }
+  .error-msg { color: #e05c00; font-size: 12px; padding: 1rem; background: #1a0a00; border-radius: 8px; border: 1px solid #5a2e00; margin-bottom: 1rem; }
+
+  .footer { text-align: center; font-size: 11px; color: #333; padding: 1.5rem 0 .5rem; border-top: 1px solid #1a1a1a; margin-top: 1rem; letter-spacing: .1em; text-transform: uppercase; }
+
+  @media (max-width: 700px) {
+    .grid2, .grid3, .grid2b { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .hdr { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="db" id="root">
+  <div class="loading"><i class="ti ti-loader"></i> Loading Bando Bodega dashboard...</div>
+</div>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSegLK8c22GOMm5H4xBJLL3yPt3j6VThl792rDEOv2r47CnHEgZE5SdNMP0u-85_-RGvKuveN-fxECp/pub?gid=987654321&single=true&output=csv';
+
+const PHASE_COLORS = {
+  'Phase 0 — Ops Stabilization': '#e05c00',
+  'Phase 1 — Quick Wins': '#3987e5',
+  'Phase 2 — Product Drops': '#1baf7a',
+  'Phase 3 — Bando Bodega Build': '#888780',
+  'Ongoing — Full Engagement Duration': '#9085e9'
+};
+const PHASE_SHORT = {
+  'Phase 0 — Ops Stabilization': 'Phase 0 — Ops',
+  'Phase 1 — Quick Wins': 'Phase 1 — Quick wins',
+  'Phase 2 — Product Drops': 'Phase 2 — Products',
+  'Phase 3 — Bando Bodega Build': 'Phase 3 — Build',
+  'Ongoing — Full Engagement Duration': 'Ongoing'
+};
+
+function pillClass(s) {
+  if (!s) return 'pill-gray';
+  const l = s.toLowerCase();
+  if (l === 'in progress') return 'pill-blue';
+  if (l === 'ongoing') return 'pill-purple';
+  if (l === 'completed') return 'pill-green';
+  return 'pill-gray';
+}
+function priPill(p) {
+  if (!p) return '';
+  const l = p.toLowerCase();
+  if (l === 'high') return '<span class="pill pill-red">High</span>';
+  if (l === 'medium') return '<span class="pill pill-yellow">Med</span>';
+  return '<span class="pill pill-gray">Low</span>';
+}
+function daysToLaunch() {
+  return Math.max(0, Math.ceil((new Date('2026-10-03') - new Date()) / 86400000));
+}
+function nowStr() {
+  return new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+let statusChartInst = null;
+let readyChartInst = null;
+
+function render(tasks) {
+  const valid = tasks.filter(t => t['Task Name'] && t['Task Name'] !== 'TASK' && !t['Task Name'].startsWith('#') && t['Task Name'].trim() !== '');
+
+  const total = valid.length;
+  const inProg = valid.filter(t => t.Status === 'In Progress').length;
+  const notStart = valid.filter(t => t.Status === 'Not Started').length;
+  const ongoing = valid.filter(t => t.Status === 'Ongoing').length;
+  const completed = valid.filter(t => t.Status === 'Completed').length;
+  const highPri = valid.filter(t => t.Priority === 'High').length;
+  const active = inProg + ongoing + completed;
+  const pct = Math.round((active / total) * 100);
+
+  const phases = ['Phase 0 — Ops Stabilization','Phase 1 — Quick Wins','Phase 2 — Product Drops','Phase 3 — Bando Bodega Build','Ongoing — Full Engagement Duration'];
+  const phaseStats = phases.map(ph => {
+    const pt = valid.filter(t => t.Phase === ph);
+    const pa = pt.filter(t => ['In Progress','Ongoing','Completed'].includes(t.Status)).length;
+    return { ph, total: pt.length, active: pa, pct: pt.length ? Math.round((pa / pt.length) * 100) : 0 };
+  });
+
+  const topTasks = valid.filter(t => t.Priority === 'High' && t.Status !== 'Completed').slice(0, 6);
+  const upcoming = valid.filter(t => t['End Date'] && t.Status !== 'Completed')
+    .sort((a, b) => new Date(a['End Date'] + ' 2026') - new Date(b['End Date'] + ' 2026'))
+    .slice(0, 6);
+
+  const actions = [
+    { color: '#e05c00', text: 'Complete sauce label designs — overdue, needs immediate action' },
+    { color: '#3987e5', text: 'Finalize low-MOQ label vendor list and confirm vendor by May 1' },
+    { color: '#3987e5', text: 'Post VA job descriptions and begin screening this week' },
+    { color: '#1baf7a', text: 'Terry to send vendor IG pages or add Darius to group chat' }
+  ];
+
+  const tl = [
+    { label: 'Phase 0 — Ops', color: '#e05c00', left: 0, width: 18 },
+    { label: 'Phase 1 — Wins', color: '#3987e5', left: 15, width: 26 },
+    { label: 'Phase 2 — Products', color: '#1baf7a', left: 20, width: 40 },
+    { label: 'Phase 3 — Build', color: '#888780', left: 36, width: 46 },
+    { label: 'Ongoing', color: '#9085e9', left: 15, width: 82 }
+  ];
+
+  document.getElementById('root').innerHTML = `
+    <div class="hdr">
+      <div class="brand">
+        <div class="logo">BB</div>
+        <div>
+          <div class="brand-name">Bando Bodega</div>
+          <div class="brand-sub">Food · Art · Culture · Executive Command Center</div>
+        </div>
+      </div>
+      <div class="hdr-right">
+        <span class="badge-green"><i class="ti ti-circle-check"></i> On track</span>
+        <span class="badge-orange"><i class="ti ti-calendar"></i> Launch Oct 3, 2026</span>
+        <button class="refresh-btn" onclick="loadData()"><i class="ti ti-refresh"></i> Refresh data</button>
+        <span class="last-updated">Updated: ${nowStr()}</span>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi kpi-orange"><div class="kpi-label">Total tasks</div><div class="kpi-val">${total}</div><div class="kpi-sub">Across all phases</div></div>
+      <div class="kpi kpi-blue"><div class="kpi-label">In progress</div><div class="kpi-val">${inProg}</div><div class="kpi-sub">Active right now</div></div>
+      <div class="kpi kpi-yellow"><div class="kpi-label">Not started</div><div class="kpi-val">${notStart}</div><div class="kpi-sub">Scheduled ahead</div></div>
+      <div class="kpi kpi-orange"><div class="kpi-label">High priority</div><div class="kpi-val">${highPri}</div><div class="kpi-sub">Need attention</div></div>
+      <div class="kpi kpi-green"><div class="kpi-label">Days to launch</div><div class="kpi-val">${daysToLaunch()}</div><div class="kpi-sub">Oct 3, 2026 target</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-layers-intersect"></i> Phase progress</div>
+        ${phaseStats.map(p => `
+          <div class="phase-row">
+            <div class="phase-dot" style="background:${PHASE_COLORS[p.ph]||'#888'}"></div>
+            <div class="phase-name">${PHASE_SHORT[p.ph]||p.ph}</div>
+            <div class="track"><div class="fill" style="width:${p.pct}%;background:${PHASE_COLORS[p.ph]||'#888'}"></div></div>
+            <div class="phase-pct">${p.pct}%</div>
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-chart-donut"></i> Tasks by status</div>
+        <div style="position:relative;height:150px"><canvas id="statusChart" role="img" aria-label="Donut chart of task status">${inProg} in progress, ${notStart} not started, ${ongoing} ongoing, ${completed} completed.</canvas></div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#3987e5"></div>In progress (${inProg})</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#333"></div>Not started (${notStart})</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#9085e9"></div>Ongoing (${ongoing})</div>
+          ${completed > 0 ? `<div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div>Done (${completed})</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-flag"></i> Top priority open tasks</div>
+        ${topTasks.map(t => `
+          <div class="task-row">
+            <div style="flex:1">
+              <div class="task-name">${t['Task Name']}</div>
+              <div class="task-meta">${(t.Phase||'').split('—')[0].trim()} · ${t.Owner||''} · Due ${t['End Date']||''}</div>
+            </div>
+            <div class="pills">${priPill(t.Priority)}<span class="pill ${pillClass(t.Status)}">${t.Status||''}</span></div>
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-rocket"></i> Launch readiness</div>
+        <div class="ring-wrap">
+          <div style="position:relative;width:100px;height:100px"><canvas id="readyChart" role="img" aria-label="Readiness gauge showing ${pct}% complete">${pct}% of tasks active or complete.</canvas></div>
+          <div class="ring-num">${pct}%</div>
+          <div class="ring-sub">${active} of ${total} tasks<br>active or complete</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-title"><i class="ti ti-calendar-time"></i> Project timeline — May to December 2026</div>
+      ${tl.map(t => `
+        <div class="tl-row">
+          <div class="tl-label">${t.label}</div>
+          <div class="tl-track"><div class="tl-bar" style="left:${t.left}%;width:${t.width}%;background:${t.color}"></div></div>
+        </div>`).join('')}
+      <div class="tl-months">
+        ${['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(m => `<span class="tl-month">${m}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="grid2b">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-clock-exclamation"></i> Upcoming deadlines</div>
+        ${upcoming.map(t => `
+          <div class="dl-row">
+            <div style="flex:1">
+              <div class="dl-name">${t['Task Name']}</div>
+              <div class="dl-phase">${(t.Phase||'').split('—')[0].trim()}</div>
+            </div>
+            <div class="dl-date">${t['End Date']||''}</div>
+            ${priPill(t.Priority)}
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-bolt"></i> Next executive actions</div>
+        ${actions.map((a,i) => `
+          <div class="action-row">
+            <div class="action-num" style="background:${a.color}">${i+1}</div>
+            <div class="action-text">${a.text}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="footer">Food · Art · Culture · Opportunity · Community</div>
+  `;
+
+  if (statusChartInst) statusChartInst.destroy();
+  if (readyChartInst) readyChartInst.destroy();
+
+  statusChartInst = new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['In progress','Not started','Ongoing','Completed'],
+      datasets: [{ data: [inProg, notStart, ongoing, completed], backgroundColor: ['#3987e5','#2a2a2a','#9085e9','#4caf50'], borderWidth: 2, borderColor: '#1a1a1a' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false }, tooltip: { enabled: true } } }
+  });
+
+  readyChartInst = new Chart(document.getElementById('readyChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Active/done','Remaining'],
+      datasets: [{ data: [active, notStart], backgroundColor: ['#e05c00','#222'], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '74%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+  });
+}
+
+function loadData() {
+  const root = document.getElementById('root');
+  if (root.innerHTML.indexOf('hdr') > -1) {
+    const btn = document.querySelector('.refresh-btn');
+    if (btn) btn.textContent = '⟳ Refreshing...';
+  } else {
+    root.innerHTML = '<div class="loading">Loading Bando Bodega dashboard...</div>';
+  }
+
+  Papa.parse(CSV_URL, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: results => render(results.data),
+    error: () => render(FALLBACK)
+  });
+}
+
+const FALLBACK = [
+  {'Task Name':'Audit all existing SOPs and systems',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 22','End Date':'Apr 30',Status:'In Progress',Priority:'High'},
+  {'Task Name':'Build hiring SOP (criteria + interview process)',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 22','End Date':'May 1',Status:'In Progress',Priority:'High'},
+  {'Task Name':'Draft training test (kitchen + menu knowledge)',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius + Terry','Start Date':'Apr 22','End Date':'May 5',Status:'In Progress',Priority:'High'},
+  {'Task Name':'Create standardized training schedule per role',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius + Terry','Start Date':'Apr 28','End Date':'May 7',Status:'Not Started',Priority:'Medium'},
+  {'Task Name':'Build payroll SOP + Loom recording',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 22','End Date':'May 1',Status:'In Progress',Priority:'High'},
+  {'Task Name':'Draft VA job descriptions (1-2 roles)',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 22','End Date':'Apr 30',Status:'In Progress',Priority:'High'},
+  {'Task Name':'Post VA roles and begin screening',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 28','End Date':'May 7',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Create VA onboarding SOPs and training docs',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 28','End Date':'May 10',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Order 20-25 printed employee handbooks',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'May 1','End Date':'May 10',Status:'Not Started',Priority:'Medium'},
+  {'Task Name':'Continue scheduling interviews from Indeed',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 22','End Date':'May 15',Status:'In Progress',Priority:'High'},
+  {'Task Name':'Submit revised sauce label designs',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 22','End Date':'Apr 25',Status:'In Progress',Priority:'High'},
+  {'Task Name':'Finalize label vendor list (low MOQ)',Phase:'Phase 0 — Ops Stabilization',Owner:'Darius','Start Date':'Apr 22','End Date':'May 1',Status:'In Progress',Priority:'High'},
+  {'Task Name':'VA team fully onboarded and delegated to',Phase:'Phase 1 — Quick Wins',Owner:'Darius','Start Date':'May 15','End Date':'May 25',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Window decals designed, produced, installed',Phase:'Phase 1 — Quick Wins',Owner:'Darius','Start Date':'May 15','End Date':'Jun 1',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Sweet Tea — sourced, priced, launched',Phase:'Phase 1 — Quick Wins',Owner:'Darius','Start Date':'May 15','End Date':'Jun 15',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Freeze Cups — sourced, priced, launched',Phase:'Phase 1 — Quick Wins',Owner:'Darius','Start Date':'May 15','End Date':'Jun 15',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Wing Wednesday — expanded offering launched',Phase:'Phase 1 — Quick Wins',Owner:'Darius + Terry','Start Date':'May 15','End Date':'Jun 30',Status:'Not Started',Priority:'Medium'},
+  {'Task Name':'Nibblers — defined, sourced, launched',Phase:'Phase 1 — Quick Wins',Owner:'Darius + Terry','Start Date':'Jun 1','End Date':'Jul 15',Status:'Not Started',Priority:'Medium'},
+  {'Task Name':'Weekly Tuesday meetings established + running',Phase:'Phase 1 — Quick Wins',Owner:'Darius + Terry','Start Date':'May 15','End Date':'Jul 31',Status:'Ongoing',Priority:'High'},
+  {'Task Name':'Resolve vendor contact — Amir Shahzad',Phase:'Phase 2 — Product Drops',Owner:'Terry + Darius','Start Date':'Jun 1','End Date':'Jun 7',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Receive vendor IG pages or group chat access',Phase:'Phase 2 — Product Drops',Owner:'Terry','Start Date':'Jun 1','End Date':'Jun 7',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Apparel designer briefs finalized',Phase:'Phase 2 — Product Drops',Owner:'Darius','Start Date':'Jun 7','End Date':'Jun 14',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Apparel samples ordered and reviewed',Phase:'Phase 2 — Product Drops',Owner:'Darius','Start Date':'Jun 14','End Date':'Jul 1',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Sauce label design finalized and approved',Phase:'Phase 2 — Product Drops',Owner:'Darius + Terry','Start Date':'May 1','End Date':'May 15',Status:'In Progress',Priority:'High'},
+  {'Task Name':'Sauce label vendor selected and order placed',Phase:'Phase 2 — Product Drops',Owner:'Darius','Start Date':'May 15','End Date':'Jun 1',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Online store built (apparel + sauce)',Phase:'Phase 2 — Product Drops',Owner:'Darius','Start Date':'Jul 1','End Date':'Aug 15',Status:'Not Started',Priority:'High'},
+  {'Task Name':'First online product drop — Apparel',Phase:'Phase 2 — Product Drops',Owner:'Darius + Terry','Start Date':'Aug 1','End Date':'Aug 15',Status:'Not Started',Priority:'High'},
+  {'Task Name':'First online product drop — Sauce',Phase:'Phase 2 — Product Drops',Owner:'Darius + Terry','Start Date':'Aug 15','End Date':'Sep 1',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Confirm $50K funding disbursement and access',Phase:'Phase 3 — Bando Bodega Build',Owner:'Terry + Darius','Start Date':'Jul 1','End Date':'Jul 7',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Kickoff working session — walk space + lock floor plan',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius + Terry','Start Date':'Jul 1','End Date':'Jul 5',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Build master Bodega project tracker (Airtable)',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Jul 1','End Date':'Jul 10',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Collect 3 contractor quotes',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Jul 1','End Date':'Jul 10',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Order bulletproof glass counter + long-lead furnishings',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Jul 7','End Date':'Jul 14',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Lock product list by category (all Bodega SKUs)',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius + Terry','Start Date':'Jul 7','End Date':'Jul 14',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Brief all designers (apparel, sauce, packaging)',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Jul 14','End Date':'Jul 21',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Vet and confirm all vendors by category',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Jul 14','End Date':'Aug 1',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Order all samples',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Aug 1','End Date':'Aug 15',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Review + approve samples — place full production orders',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius + Terry','Start Date':'Aug 20','End Date':'Aug 28',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Contractor on-site — full build-out',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Aug 1','End Date':'Sep 30',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Build inventory management system (Airtable)',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Sep 1','End Date':'Oct 1',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Staff training — POS, upsell, retail flow, counter ops',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Sep 15','End Date':'Oct 15',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Soft-open walkthrough with Terry',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius + Terry','Start Date':'Oct 1','End Date':'Oct 3',Status:'Not Started',Priority:'High'},
+  {'Task Name':'PUBLIC LAUNCH — October 3, 2026 (Target)',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius + Terry','Start Date':'Oct 3','End Date':'Oct 3',Status:'Not Started',Priority:'High'},
+  {'Task Name':'30-day post-launch performance report',Phase:'Phase 3 — Bando Bodega Build',Owner:'Darius','Start Date':'Oct 3','End Date':'Nov 3',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Weekly Tuesday meetings with Terry',Phase:'Ongoing — Full Engagement Duration',Owner:'Darius + Terry','Start Date':'May 15','End Date':'Dec 31',Status:'Ongoing',Priority:'High'},
+  {'Task Name':'VA team management and oversight',Phase:'Ongoing — Full Engagement Duration',Owner:'Darius','Start Date':'May 25','End Date':'Dec 31',Status:'Ongoing',Priority:'High'},
+  {'Task Name':'KPI tracking dashboard — Bodega (post-launch)',Phase:'Ongoing — Full Engagement Duration',Owner:'Darius','Start Date':'Oct 3','End Date':'Dec 31',Status:'Not Started',Priority:'High'},
+  {'Task Name':'Scope amendment reviews',Phase:'Ongoing — Full Engagement Duration',Owner:'Darius + Terry','Start Date':'May 15','End Date':'Dec 31',Status:'Ongoing',Priority:'Medium'},
+  {'Task Name':'COO scope definition (post-Bodega launch)',Phase:'Ongoing — Full Engagement Duration',Owner:'Darius + Terry','Start Date':'Nov 3','End Date':'Dec 31',Status:'Not Started',Priority:'Medium'}
+];
+
+loadData();
+</script>
+</body>
+</html>
