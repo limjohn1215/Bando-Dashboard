@@ -653,6 +653,16 @@ const PHASE_SHORT = {
 };
 const PHASES_ORDER = ['Phase 0 — Ops Stabilization','Phase 1 — Quick Wins','Phase 2 — Product Drops','Phase 3 — Bando Bodega Build','Ongoing — Full Engagement Duration'];
 
+/* ---------- Budget tracker (edit these to update spend) ---------- */
+const BUDGET_TOTAL = 50000;
+const BUDGET_ITEMS = [
+  { item: 'Papa Wise Construction — initial payment', spent: 9000 },
+  { item: 'Bando Racing Set Sweatsuits', spent: 3750 },
+  { item: 'Samples — Quassim', spent: 200 },
+  { item: 'Mughal', spent: 175 },
+  { item: 'T-shirt samples — China', spent: 238.49 }
+];
+
 /* ---------- State ---------- */
 let RAW_TASKS = [];         // all parsed tasks, cleaned + annotated (id, overdue)
 let ownerFilter = 'All';    // 'All' | 'Darius' | 'Terry'
@@ -818,6 +828,8 @@ function renderAll() {
 }
 
 function render(valid, ownerScoped) {
+  const budgetSpent = BUDGET_ITEMS.reduce((sum, b) => sum + b.spent, 0);
+  const budgetPct = BUDGET_TOTAL ? Math.round((budgetSpent / BUDGET_TOTAL) * 100) : 0;
   const total = valid.length;
   const inProg = valid.filter(t => t.Status === 'In Progress').length;
   const notStart = valid.filter(t => t.Status === 'Not Started').length;
@@ -904,6 +916,17 @@ function render(valid, ownerScoped) {
       <div class="kpi kpi-green"><div class="kpi-label">Days to launch</div><div class="kpi-val">${daysToLaunch()}</div><div class="kpi-sub">Oct 3, 2026 target</div></div>
     </div>
 
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-title"><i class="ti ti-cash"></i> Budget tracker</div>
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="font-family:var(--bb-display);font-size:28px;color:var(--bb-yellow)">$${budgetSpent.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-size:12px;color:var(--bb-muted)">spent of $${BUDGET_TOTAL.toLocaleString('en-US')} budget</div>
+        <div style="margin-left:auto;font-size:13px;font-weight:600;color:${budgetPct>90?'#e70e0d':'#f8b904'}">${budgetPct}%</div>
+      </div>
+      <div class="track" style="height:8px;margin-bottom:14px"><div class="fill" style="width:${Math.min(budgetPct,100)}%;background:${budgetPct>90?'#e70e0d':'#f8b904'}"></div></div>
+      <div id="budgetList"></div>
+    </div>
+
     ${showAllTable ? `
     <div class="card table-card">
       <div class="card-title"><i class="ti ti-list-search"></i> All tasks${ownerFilter!=='All'?' — '+esc(ownerFilter):''}${statusFilter?' — '+esc(statusFilter):''}</div>
@@ -984,6 +1007,18 @@ function render(valid, ownerScoped) {
 
     <div class="footer">Street Food · Art · Culture · Opportunity · Community</div>
   `;
+
+  const budgetList = document.getElementById('budgetList');
+  BUDGET_ITEMS.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'dl-row';
+    row.innerHTML = `
+      <div style="flex:1">
+        <div class="dl-name">${esc(b.item)}</div>
+      </div>
+      <div class="dl-date">$${b.spent.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>`;
+    budgetList.appendChild(row);
+  });
 
   // Build clickable task rows via DOM (avoids escaping headaches, keeps live object refs)
   const topTasksList = document.getElementById('topTasksList');
